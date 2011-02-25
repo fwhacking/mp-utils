@@ -23,7 +23,8 @@ int main(int argc, char **argv)
 {
 	FILE *fd;
 	MP_HEADER *hdr;
-	uint32_t *start;
+	MP_PART *part;
+	unsigned char *fp;
 	char magic[16];
 	char name[32];
 	long size;
@@ -47,12 +48,11 @@ int main(int argc, char **argv)
 	printf("Firmware file size : %ld bytes\n\n", size);
 	fseek(fd, 0L, SEEK_SET);
 
-	start = malloc(size);
-
-	fread(start, size, 1, fd);
+	fp = malloc(size);
+	fread(fp, size, 1, fd);
 	fclose(fd);
 
-	hdr = (MP_HEADER *) start;
+	hdr = (MP_HEADER *) fp;
 	
 	memcpy(magic, hdr->magic, 8);
 	magic[8] = '\0';
@@ -60,22 +60,38 @@ int main(int argc, char **argv)
 	if (strncmp("adma1.01", magic, 9) != 0)
 	{
 		printf("Magic 'adma1.01' not found\n");
-		free(start);
+		free(fp);
 		exit(1);
 	}
 	
 	memcpy(name, hdr->name, 32);
 	name[31] = '\0';
 
-	printf("FIELD\t\tVALUE\n");
+	printf("HEADER\n");
 	printf("-------------------------------------\n");
 	printf("MAGIC\t\t%s\n", magic);
 	printf("CRC32\t\t0x%08X\n", hdr->crc32);
 	printf("VERSION\t\t%d.%d\n", hdr->majver, hdr->minver);
 	printf("NAME\t\t%s\n", name);
+	printf("-------------------------------------\n\n");
+	
+	part = (MP_PART *) (fp + sizeof(MP_HEADER));
+	
+	printf("PART 1\n");
 	printf("-------------------------------------\n");
+	printf("MAGIC\t\t%x\n", part->magic);
+	printf("LENGTH\t\t%d\n", part->length);
+	printf("-------------------------------------\n\n");
 
-	free(start);
+	part = (MP_PART *) (fp + sizeof(MP_HEADER) + sizeof(MP_PART) + part->length);
+	
+	printf("PART 2\n");
+	printf("-------------------------------------\n");
+	printf("MAGIC\t\t%x\n", part->magic);
+	printf("LENGTH\t\t%d\n", part->length);
+	printf("-------------------------------------\n\n");
+
+	free(fp);
 
 	exit(0);
 }
